@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- Placeholder logo. Replace with the shop's own logo. -->
+  <rect width="96" height="96" rx="20" fill="#0b6bcb"/>
+  <rect x="22" y="16" width="52" height="64" rx="8" fill="#fff"/>
+  <circle cx="32" cy="26" r="3" fill="#0b6bcb"/>
+  <circle cx="42" cy="26" r="3" fill="#0b6bcb"/>
+  <circle cx="48" cy="54" r="17" fill="#0b6bcb"/>
+  <circle cx="48" cy="54" r="12" fill="#cfe5fb"/>
+  <path d="M37 56c4-4 7 3 11 0s7-3 11 0a12 12 0 0 1-22 0z" fill="#5aa7ee"/>
+</svg>
