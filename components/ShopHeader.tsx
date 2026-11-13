@@ -7,7 +7,7 @@ export default function ShopHeader({ subtitle }: { subtitle?: string }) {
       <img src={shop.logo} alt="" width={48} height={48} className="flex-none rounded-xl" />
       <div>
         <h1 className="text-[1.15rem] font-bold">{shop.name}</h1>
-        <p className="text-[0.9rem] text-muted">{subtitle ?? shop.tagline}</p>
+        <p className="text-sm text-muted-foreground">{subtitle ?? shop.tagline}</p>
       </div>
     </header>
   );

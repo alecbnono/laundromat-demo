@@ -1,6 +1,9 @@
 import Link from "next/link";
+import PageFooter from "@/components/PageFooter";
 import ShopHeader from "@/components/ShopHeader";
-import { Notice, PageFooter, Summary, cardClass } from "@/components/ui";
+import Summary from "@/components/Summary";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { displayPhone, formatDay, peso } from "@/lib/format";
 import { shop } from "@/lib/shop";
@@ -30,62 +33,75 @@ export default function OrderStatus({
     <>
       <ShopHeader />
       {isNew && order.status === "new" ? (
-        <Notice tone="success">
-          <strong>Request sent!</strong> We will pick up your laundry{" "}
-          {formatDay(order.pickupDate).toLowerCase()}, {order.pickupWindow}.
-        </Notice>
+        <Alert variant="success" className="mt-3.5">
+          <AlertTitle>Request sent!</AlertTitle>
+          <AlertDescription>
+            We will pick up your laundry {formatDay(order.pickupDate).toLowerCase()},{" "}
+            {order.pickupWindow}.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <h2 className="mt-5 mb-1 text-[1.35rem] font-bold">Order #{order.id}</h2>
-      <p className="mb-3.5 text-muted">
+      <p className="mb-3.5 text-muted-foreground">
         Keep this page open or save the link to check your order.
       </p>
 
-      {order.status === "cancelled" ? (
-        <Notice>This order was cancelled.</Notice>
-      ) : (
-        <ol className={cn(cardClass, "grid gap-2.5")}>
-          {STEPS.map((s, i) => (
-            <li
-              key={s.status}
-              aria-current={i === current ? "step" : undefined}
-              className={cn(
-                "flex items-center gap-3",
-                i > current && "text-muted",
-                i === current && "font-bold",
-              )}
-            >
-              <span
-                className={cn(
-                  "size-4 flex-none rounded-full border-2",
-                  i < current && "border-ok bg-ok",
-                  i === current && "border-brand bg-brand ring-4 ring-[#cfe5fb]",
-                  i > current && "border-field bg-white",
-                )}
-              />
-              {s.label}
-            </li>
-          ))}
-        </ol>
-      )}
+      <div className="grid gap-3.5">
+        {order.status === "cancelled" ? (
+          <Alert variant="warning">
+            <AlertDescription>This order was cancelled.</AlertDescription>
+          </Alert>
+        ) : (
+          <Card>
+            <CardContent>
+              <ol className="grid gap-2.5">
+                {STEPS.map((s, i) => (
+                  <li
+                    key={s.status}
+                    aria-current={i === current ? "step" : undefined}
+                    className={cn(
+                      "flex items-center gap-3",
+                      i > current && "text-muted-foreground",
+                      i === current && "font-bold",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-4 flex-none rounded-full border-2",
+                        i < current && "border-success bg-success",
+                        i === current && "border-primary bg-primary ring-4 ring-primary/20",
+                        i > current && "border-input bg-card",
+                      )}
+                    />
+                    {s.label}
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        )}
 
-      <div className={cardClass}>
-        <Summary
-          rows={[
-            ["Service", order.service],
-            ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`],
-            ["Address", order.address + (order.landmark ? ` (${order.landmark})` : "")],
-            ["Return", order.fulfillment === "delivery" ? "Delivery" : "Collect at shop"],
-            ...(order.amountCentavos != null
-              ? [
-                  [
-                    "Total",
-                    `${peso(order.amountCentavos)} ${order.paid ? "(paid)" : "(unpaid)"}`,
-                  ] as [string, string],
-                ]
-              : []),
-          ]}
-        />
+        <Card>
+          <CardContent>
+            <Summary
+              rows={[
+                ["Service", order.service],
+                ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`],
+                ["Address", order.address + (order.landmark ? ` (${order.landmark})` : "")],
+                ["Return", order.fulfillment === "delivery" ? "Delivery" : "Collect at shop"],
+                ...(order.amountCentavos != null
+                  ? [
+                      [
+                        "Total",
+                        `${peso(order.amountCentavos)} ${order.paid ? "(paid)" : "(unpaid)"}`,
+                      ] as [string, string],
+                    ]
+                  : []),
+              ]}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       <PageFooter>

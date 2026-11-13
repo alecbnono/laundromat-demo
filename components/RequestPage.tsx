@@ -1,6 +1,6 @@
+import PageFooter from "@/components/PageFooter";
 import PickupForm from "@/components/PickupForm";
 import ShopHeader from "@/components/ShopHeader";
-import { PageFooter } from "@/components/ui";
 import { displayPhone, manilaDate } from "@/lib/format";
 import { shop } from "@/lib/shop";
 
@@ -10,7 +10,9 @@ export default function RequestPage() {
     <>
       <ShopHeader />
       <h2 className="mt-5 mb-1 text-[1.35rem] font-bold">Request a laundry pickup</h2>
-      <p className="mb-3.5 text-muted">Fill this in and we will come to you. No account needed.</p>
+      <p className="mb-3.5 text-muted-foreground">
+        Fill this in and we will come to you. No account needed.
+      </p>
       <PickupForm
         services={shop.services}
         windows={shop.pickupWindows}

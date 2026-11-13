@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LuCheck, LuCopy, LuMessageSquareText } from "react-icons/lu";
-import { Button, buttonClass } from "@/components/ui";
+import { Check, Copy, MessageSquareText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * The "ready" notification. Nothing is sent by the server:
@@ -31,21 +31,20 @@ export default function ReadyMessage({ message, phone }: { message: string; phon
   }
 
   return (
-    <div className="grid gap-2.5 rounded-[10px] border border-[#bfe3cd] bg-[#f1f9f4] p-3">
+    <div className="grid gap-2.5 rounded-lg border border-success/25 bg-success-soft/50 p-3">
       <p className="whitespace-pre-wrap">{message}</p>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={copy} className="flex-[1_1_140px]">
-          {copied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+        <Button variant="outline" onClick={copy} className="flex-[1_1_140px]">
+          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
           {copied ? "Copied" : "Copy message"}
         </Button>
-        <a
-          className={buttonClass({ variant: "primary", className: "flex-[1_1_140px]" })}
-          href={`sms:${phone}?&body=${encodeURIComponent(message)}`}
-        >
-          <LuMessageSquareText aria-hidden /> Send SMS
-        </a>
+        <Button asChild className="flex-[1_1_140px] no-underline">
+          <a href={`sms:${phone}?&body=${encodeURIComponent(message)}`}>
+            <MessageSquareText data-icon="inline-start" /> Send SMS
+          </a>
+        </Button>
       </div>
-      <small className="text-[0.85rem] text-muted">
+      <small className="text-sm text-muted-foreground">
         Send SMS opens your phone&apos;s texting app. You press send there.
       </small>
     </div>

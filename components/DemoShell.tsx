@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LuRotateCcw } from "react-icons/lu";
+import { RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { BackendProvider } from "@/lib/backend";
 import { cn } from "@/lib/cn";
 import { demoBackend, resetDemo } from "@/lib/demo/store";
@@ -35,37 +36,41 @@ export default function DemoShell({ children }: { children: ReactNode }) {
   }
 
   const tab = (href: string, label: string, active: boolean) => (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
+    <Button
+      asChild
+      size="sm"
+      variant="ghost"
       className={cn(
-        "flex min-h-10 flex-1 items-center justify-center rounded-lg font-semibold no-underline",
-        active ? "bg-white text-ink shadow-sm" : "text-[#4a3500]",
+        "flex-1 text-warning no-underline hover:bg-transparent hover:text-warning",
+        active && "bg-card text-foreground shadow-sm hover:bg-card hover:text-foreground",
       )}
     >
-      {label}
-    </Link>
+      <Link href={href} aria-current={active ? "page" : undefined}>
+        {label}
+      </Link>
+    </Button>
   );
 
   return (
     <BackendProvider value={demoBackend}>
-      <aside className="mb-4 grid gap-2 rounded-xl bg-warn-bg p-3 text-[0.9rem] text-[#4a3500]">
+      <aside className="mb-4 grid gap-2 rounded-xl bg-warning-soft p-3 text-sm text-warning">
         <p>
           <strong>Demo.</strong> Sample data only. Nothing is saved or sent to the shop, and
           refreshing the page starts over.
         </p>
         <div className="flex items-center gap-1.5">
-          <nav aria-label="Demo views" className="flex flex-1 gap-1 rounded-[10px] bg-black/5 p-1">
+          <nav aria-label="Demo views" className="flex flex-1 gap-1 rounded-lg bg-black/5 p-1">
             {tab("/demo", "Customer view", !onOwner)}
             {tab("/demo/owner", "Owner view", onOwner)}
           </nav>
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={reset}
-            className="inline-flex min-h-10 items-center gap-1.5 px-2 font-semibold underline"
+            className="text-warning hover:bg-black/5 hover:text-warning"
           >
-            <LuRotateCcw aria-hidden /> Reset
-          </button>
+            <RotateCcw data-icon="inline-start" /> Reset
+          </Button>
         </div>
       </aside>
       {inBrowser ? children : null}

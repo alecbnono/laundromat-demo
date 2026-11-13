@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Button, FieldError, FieldLabel, cardClass, inputClass } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/cn";
 import { loginSchema, type LoginForm as LoginValues } from "@/lib/validation";
 
 export default function LoginForm() {
@@ -36,39 +38,41 @@ export default function LoginForm() {
   const busy = login.isPending || login.isSuccess;
 
   return (
-    <form
-      onSubmit={handleSubmit((values) => login.mutate(values))}
-      className={cn(cardClass, "grid gap-4")}
-      noValidate
-    >
-      <label>
-        <FieldLabel>Email</FieldLabel>
-        <input
-          {...register("email")}
-          type="email"
-          inputMode="email"
-          autoComplete="username"
-          autoFocus
-          aria-invalid={!!errors.email}
-          className={inputClass}
-        />
-        <FieldError>{errors.email?.message}</FieldError>
-      </label>
-      <label>
-        <FieldLabel>Password</FieldLabel>
-        <input
-          {...register("password")}
-          type="password"
-          autoComplete="current-password"
-          aria-invalid={!!errors.password}
-          className={inputClass}
-        />
-        <FieldError>{errors.password?.message}</FieldError>
-      </label>
-      <FieldError>{login.error?.message}</FieldError>
-      <Button type="submit" variant="primary" disabled={busy}>
-        {busy ? "Checking…" : "Open order list"}
-      </Button>
-    </form>
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSubmit((values) => login.mutate(values))} noValidate>
+          <FieldGroup>
+            <Field data-invalid={!!errors.email}>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input
+                {...register("email")}
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="username"
+                autoFocus
+                aria-invalid={!!errors.email}
+              />
+              <FieldError>{errors.email?.message}</FieldError>
+            </Field>
+            <Field data-invalid={!!errors.password}>
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <Input
+                {...register("password")}
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                aria-invalid={!!errors.password}
+              />
+              <FieldError>{errors.password?.message}</FieldError>
+            </Field>
+            <FieldError>{login.error?.message}</FieldError>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Checking…" : "Open order list"}
+            </Button>
+          </FieldGroup>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

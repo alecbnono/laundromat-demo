@@ -1,49 +1,106 @@
 /* Only look for class names in the source folders. Left to scan everything, Tailwind also
    watches data/laundry.db, so every database write makes the dev server reload the page. */
 @import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @source "../app";
 @source "../components";
 @source "../lib";
 
-/* Shop colours. Change --color-brand to match a shop's logo. */
+/* The app has no dark mode. This keeps the shadcn components' dark: styles switched off
+   unless a .dark class is added, instead of following the phone's dark setting. */
+@custom-variant dark (&:is(.dark *));
+
+/* Shop colours, in the names the shadcn/ui components expect.
+   Change --primary (and --accent, its pale version) to match a shop's logo. */
+:root {
+  --background: #f3f6fa;
+  --foreground: #16202c;
+  --card: #ffffff;
+  --card-foreground: #16202c;
+  --popover: #ffffff;
+  --popover-foreground: #16202c;
+  --primary: #0b6bcb;
+  --primary-foreground: #ffffff;
+  --secondary: #e8edf3;
+  --secondary-foreground: #34414f;
+  --muted: #e8edf3;
+  --muted-foreground: #5d6b7c;
+  --accent: #eef6ff;
+  --accent-foreground: #0957a6;
+  --destructive: #b3261e;
+  --border: #d9e0e8;
+  --input: #b9c4d0;
+  --ring: #8fc1f5;
+  --radius: 0.625rem;
+  /* Not part of shadcn: "good" and "needs attention" colours for pills and notices. */
+  --success: #17794a;
+  --success-soft: #e2f5ea;
+  --warning: #8a5a00;
+  --warning-soft: #fdf1d3;
+}
+
 @theme {
-  --color-bg: #f3f6fa;
-  --color-ink: #16202c;
-  --color-muted: #5d6b7c;
-  --color-line: #d9e0e8;
-  --color-field: #b9c4d0;
-  --color-brand: #0b6bcb;
-  --color-brand-dark: #0957a6;
-  --color-brand-soft: #eef6ff;
-  --color-ok: #17794a;
-  --color-ok-bg: #e2f5ea;
-  --color-warn: #8a5a00;
-  --color-warn-bg: #fdf1d3;
-  --color-danger: #b3261e;
-  --color-danger-bg: #f9e1df;
+  /* System fonts only, so nothing is downloaded and the app works offline. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   html {
     -webkit-text-size-adjust: 100%;
+    @apply font-sans;
   }
   body {
-    background: var(--color-bg);
-    color: var(--color-ink);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    @apply bg-background text-foreground;
     line-height: 1.45;
   }
   a {
-    color: var(--color-brand);
+    color: var(--primary);
     text-decoration: underline;
   }
   button:not(:disabled),
-  summary,
-  label:has(input[type="radio"]) {
+  [role="button"]:not(:disabled),
+  summary {
     cursor: pointer;
   }
   :focus-visible {
-    outline: 3px solid #8fc1f5;
+    outline: 3px solid var(--ring);
     outline-offset: 1px;
   }
 }

@@ -1,14 +1,30 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LuArrowRight } from "react-icons/lu";
-import { Button, FieldError, FieldLabel, cardClass, inputClass } from "@/components/ui";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import { useBackend } from "@/lib/backend";
-import { cn } from "@/lib/cn";
 import { pickupRequestSchema, type PickupRequest } from "@/lib/validation";
 
 interface Props {
@@ -18,9 +34,22 @@ interface Props {
   maxDate: string;
 }
 
-const choiceClass =
-  "mb-2 flex items-center gap-3 rounded-[10px] border border-line p-3 has-checked:border-brand has-checked:bg-brand-soft";
-const radioClass = "size-5 flex-none accent-brand";
+const optional = <span className="font-normal text-muted-foreground">(optional)</span>;
+
+/** One tappable radio choice: the whole bordered row is the label. */
+function Choice({ id, value, title, detail }: { id: string; value: string; title: string; detail?: string }) {
+  return (
+    <FieldLabel htmlFor={id}>
+      <Field orientation="horizontal">
+        <RadioGroupItem id={id} value={value} className="size-5" />
+        <FieldContent>
+          <FieldTitle className="text-base">{title}</FieldTitle>
+          {detail && <FieldDescription>{detail}</FieldDescription>}
+        </FieldContent>
+      </Field>
+    </FieldLabel>
+  );
+}
 
 export default function PickupForm({ services, windows, minDate, maxDate }: Props) {
   const router = useRouter();
@@ -28,6 +57,7 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
   const queryClient = useQueryClient();
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors },
@@ -64,147 +94,155 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
   // Keep the button disabled while the confirmation page loads.
   const busy = submit.isPending || submit.isSuccess;
 
-  /** Props for a text field: registers it and wires up its error message. */
+  /** Props for a text field: registers it and wires up its label and error message. */
   const field = (name: keyof PickupRequest) => ({
     ...register(name),
+    id: name,
     "aria-invalid": !!errors[name],
     "aria-describedby": errors[name] ? `${name}-error` : undefined,
   });
   const err = (name: keyof PickupRequest) => (
     <FieldError id={`${name}-error`}>{errors[name]?.message}</FieldError>
   );
+  /** A labelled field with its error message underneath. */
+  const row = (name: keyof PickupRequest, label: ReactNode, children: ReactNode) => (
+    <Field data-invalid={!!errors[name]}>
+      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      {children}
+      {err(name)}
+    </Field>
+  );
+  /** A group of radio choices. */
+  const choices = (name: "service" | "fulfillment", legend: string, children: ReactNode) => (
+    <FieldSet data-invalid={!!errors[name]}>
+      <FieldLegend variant="label">{legend}</FieldLegend>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <RadioGroup
+            name={field.name}
+            value={field.value}
+            onValueChange={field.onChange}
+            onBlur={field.onBlur}
+          >
+            {children}
+          </RadioGroup>
+        )}
+      />
+      {err(name)}
+    </FieldSet>
+  );
 
   return (
-    <form
-      onSubmit={handleSubmit((data) => submit.mutate(data))}
-      className={cn(cardClass, "grid gap-4")}
-      noValidate
-    >
-      <FieldError>{errors.root?.message}</FieldError>
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSubmit((data) => submit.mutate(data))} noValidate>
+          <FieldGroup>
+            <FieldError>{errors.root?.message}</FieldError>
 
-      <label>
-        <FieldLabel>Your name</FieldLabel>
-        <input {...field("name")} autoComplete="name" maxLength={80} className={inputClass} />
-        {err("name")}
-      </label>
+            {row("name", "Your name", <Input {...field("name")} autoComplete="name" maxLength={80} />)}
 
-      <label>
-        <FieldLabel>Mobile number</FieldLabel>
-        <input
-          {...field("phone")}
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="0917 123 4567"
-          className={inputClass}
-        />
-        <small className="text-[0.85rem] text-muted">
-          We will text you here when your laundry is ready.
-        </small>
-        {err("phone")}
-      </label>
+            {row(
+              "phone",
+              "Mobile number",
+              <>
+                <Input
+                  {...field("phone")}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="0917 123 4567"
+                />
+                <FieldDescription>We will text you here when your laundry is ready.</FieldDescription>
+              </>,
+            )}
 
-      <label>
-        <FieldLabel>Pickup address</FieldLabel>
-        <textarea
-          {...field("address")}
-          rows={2}
-          autoComplete="street-address"
-          maxLength={200}
-          placeholder="House no., street, barangay"
-          className={inputClass}
-        />
-        {err("address")}
-      </label>
+            {row(
+              "address",
+              "Pickup address",
+              <Textarea
+                {...field("address")}
+                rows={2}
+                autoComplete="street-address"
+                maxLength={200}
+                placeholder="House no., street, barangay"
+              />,
+            )}
 
-      <label>
-        <FieldLabel optional>Landmark</FieldLabel>
-        <input
-          {...field("landmark")}
-          maxLength={120}
-          placeholder="e.g. beside the sari-sari store, green gate"
-          className={inputClass}
-        />
-        {err("landmark")}
-      </label>
+            {row(
+              "landmark",
+              <>Landmark {optional}</>,
+              <Input
+                {...field("landmark")}
+                maxLength={120}
+                placeholder="e.g. beside the sari-sari store, green gate"
+              />,
+            )}
 
-      <fieldset>
-        <legend className="mb-1.5 font-semibold">Service</legend>
-        {services.map((s) => (
-          <label key={s.name} className={choiceClass}>
-            <input type="radio" value={s.name} {...register("service")} className={radioClass} />
-            <span className="grid">
-              <strong className="font-semibold">{s.name}</strong>
-              <small className="text-[0.85rem] text-muted">{s.price}</small>
-            </span>
-          </label>
-        ))}
-        {err("service")}
-      </fieldset>
+            {choices(
+              "service",
+              "Service",
+              services.map((s, i) => (
+                <Choice key={s.name} id={`service-${i}`} value={s.name} title={s.name} detail={s.price} />
+              )),
+            )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <label>
-          <FieldLabel>Pickup date</FieldLabel>
-          <input
-            {...field("pickupDate")}
-            type="date"
-            min={minDate}
-            max={maxDate}
-            className={inputClass}
-          />
-          {err("pickupDate")}
-        </label>
-        <label>
-          <FieldLabel>Pickup time</FieldLabel>
-          <select {...field("pickupWindow")} className={inputClass}>
-            <option value="" disabled>
-              Choose
-            </option>
-            {windows.map((w) => (
-              <option key={w}>{w}</option>
-            ))}
-          </select>
-          {err("pickupWindow")}
-        </label>
-      </div>
+            <div className="grid grid-cols-2 items-start gap-3">
+              {row(
+                "pickupDate",
+                "Pickup date",
+                <Input {...field("pickupDate")} type="date" min={minDate} max={maxDate} />,
+              )}
+              {row(
+                "pickupWindow",
+                "Pickup time",
+                <NativeSelect {...field("pickupWindow")} className="w-full">
+                  <NativeSelectOption value="" disabled>
+                    Choose
+                  </NativeSelectOption>
+                  {windows.map((w) => (
+                    <NativeSelectOption key={w}>{w}</NativeSelectOption>
+                  ))}
+                </NativeSelect>,
+              )}
+            </div>
 
-      <fieldset>
-        <legend className="mb-1.5 font-semibold">When it is ready</legend>
-        <label className={choiceClass}>
-          <input type="radio" value="delivery" {...register("fulfillment")} className={radioClass} />
-          <strong className="font-semibold">Deliver it back to me</strong>
-        </label>
-        <label className={choiceClass}>
-          <input type="radio" value="collect" {...register("fulfillment")} className={radioClass} />
-          <strong className="font-semibold">I will collect it at the shop</strong>
-        </label>
-        {err("fulfillment")}
-      </fieldset>
+            {choices(
+              "fulfillment",
+              "When it is ready",
+              <>
+                <Choice id="fulfillment-delivery" value="delivery" title="Deliver it back to me" />
+                <Choice id="fulfillment-collect" value="collect" title="I will collect it at the shop" />
+              </>,
+            )}
 
-      <label>
-        <FieldLabel optional>Notes</FieldLabel>
-        <textarea
-          {...field("notes")}
-          rows={2}
-          maxLength={300}
-          placeholder="e.g. 2 bags, separate the whites, no fabric conditioner"
-          className={inputClass}
-        />
-        {err("notes")}
-      </label>
+            {row(
+              "notes",
+              <>Notes {optional}</>,
+              <Textarea
+                {...field("notes")}
+                rows={2}
+                maxLength={300}
+                placeholder="e.g. 2 bags, separate the whites, no fabric conditioner"
+              />,
+            )}
 
-      {/* Spam trap: hidden from people, left empty by real customers. */}
-      <div className="absolute -left-[9999px] size-px overflow-hidden" aria-hidden="true">
-        <label>
-          Website
-          <input {...register("website")} tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+            {/* Spam trap: hidden from people, left empty by real customers. */}
+            <div className="absolute -left-[9999px] size-px overflow-hidden" aria-hidden="true">
+              <label>
+                Website
+                <input {...register("website")} tabIndex={-1} autoComplete="off" />
+              </label>
+            </div>
 
-      <Button type="submit" variant="primary" disabled={busy}>
-        {busy ? "Sending…" : "Request pickup"}
-        {!busy && <LuArrowRight aria-hidden />}
-      </Button>
-    </form>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Sending…" : "Request pickup"}
+              {!busy && <ArrowRight data-icon="inline-end" />}
+            </Button>
+          </FieldGroup>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

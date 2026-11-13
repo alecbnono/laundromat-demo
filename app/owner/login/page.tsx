@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
 import ShopHeader from "@/components/ShopHeader";
-import { Notice } from "@/components/ui";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getOwnerSession } from "@/lib/session";
 import { DEMO_OWNER } from "@/lib/shop";
 
@@ -16,10 +16,12 @@ export default async function LoginPage() {
         <LoginForm />
       </div>
       {process.env.NODE_ENV !== "production" && (
-        <Notice>
-          Development mode: after <code>npm run seed</code> the demo login is{" "}
-          <strong>{DEMO_OWNER.email}</strong> / <strong>{DEMO_OWNER.password}</strong>.
-        </Notice>
+        <Alert variant="warning" className="mt-3.5">
+          <AlertDescription>
+            Development mode: after <code>npm run seed</code> the demo login is{" "}
+            <strong>{DEMO_OWNER.email}</strong> / <strong>{DEMO_OWNER.password}</strong>.
+          </AlertDescription>
+        </Alert>
       )}
     </>
   );

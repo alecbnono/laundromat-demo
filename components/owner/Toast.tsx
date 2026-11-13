@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuCheck, LuCircleAlert } from "react-icons/lu";
+import { Check, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useOwnerUi } from "@/lib/owner-store";
 
@@ -31,11 +31,11 @@ export default function Toast() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             className={cn(
-              "flex items-center gap-2 rounded-full px-4 py-2.5 font-semibold text-white shadow-lg",
-              toast.error ? "bg-danger" : "bg-ink",
+              "flex items-center gap-2 rounded-full px-4 py-2.5 font-semibold text-background shadow-lg [&_svg]:size-4",
+              toast.error ? "bg-destructive" : "bg-foreground",
             )}
           >
-            {toast.error ? <LuCircleAlert aria-hidden /> : <LuCheck aria-hidden />}
+            {toast.error ? <CircleAlert /> : <Check />}
             {toast.text}
           </motion.div>
         )}

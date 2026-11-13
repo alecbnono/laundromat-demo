@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuLogOut } from "react-icons/lu";
+import { LogOut } from "lucide-react";
 import OrderCard from "@/components/owner/OrderCard";
 import Toast from "@/components/owner/Toast";
 import { useOrders } from "@/components/owner/useOrders";
-import { LinkButton, Notice, PageFooter } from "@/components/ui";
+import PageFooter from "@/components/PageFooter";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useBackend } from "@/lib/backend";
-import { cn } from "@/lib/cn";
 import { peso } from "@/lib/format";
 import { useOwnerUi, type OwnerTab } from "@/lib/owner-store";
 import type { Order } from "@/lib/types";
@@ -61,63 +64,59 @@ export default function OrderBoard({ initialOrders }: { initialOrders: Order[] }
 
   return (
     <>
-      <div role="tablist" aria-label="Order groups" className="mt-4 mb-3.5 grid grid-cols-3 gap-1.5">
-        {TABS.map((t) => {
-          const active = t.key === current.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "relative flex min-h-[46px] items-center justify-center gap-1.5 rounded-[10px] border border-line bg-white font-semibold",
-                active && "text-white",
-              )}
-            >
-              {/* The blue highlight slides between tabs. */}
-              {active && (
-                <motion.span
-                  layoutId="active-tab"
-                  className="absolute -inset-px rounded-[10px] bg-brand"
-                  transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
-                />
-              )}
-              <span className="relative">{t.label}</span>
-              <b className="relative rounded-full bg-black/10 px-2 py-px text-[0.8rem]">
+      <Tabs
+        value={current.key}
+        onValueChange={(key) => setTab(key as OwnerTab)}
+        className="mt-4 gap-3.5"
+      >
+        <TabsList aria-label="Order groups" className="w-full group-data-horizontal/tabs:h-12">
+          {TABS.map((t) => (
+            <TabsTrigger key={t.key} value={t.key} className="text-base font-semibold">
+              {t.label}
+              <Badge variant={t.key === current.key ? "default" : "secondary"}>
                 {orders.filter(t.match).length}
-              </b>
-            </button>
-          );
-        })}
-      </div>
+              </Badge>
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {isError && (
-        <Notice>Could not refresh the list. Showing the last orders loaded.</Notice>
-      )}
+        {/* One panel whose contents change with the tab, so cards can animate in and out. */}
+        <TabsContent value={current.key} className="grid gap-3.5 text-base">
+          {isError && (
+            <Alert variant="warning">
+              <AlertDescription>
+                Could not refresh the list. Showing the last orders loaded.
+              </AlertDescription>
+            </Alert>
+          )}
 
-      {unpaidTotal > 0 && (
-        <p className="mb-3.5 text-muted">
-          Unpaid so far: <strong className="text-ink">{peso(unpaidTotal)}</strong>
-        </p>
-      )}
+          {unpaidTotal > 0 && (
+            <p className="text-muted-foreground">
+              Unpaid so far: <strong className="text-foreground">{peso(unpaidTotal)}</strong>
+            </p>
+          )}
 
-      {shown.length === 0 && <Notice>{current.empty}</Notice>}
-      <AnimatePresence mode="popLayout" initial={false}>
-        {shown.map((o) => (
-          <motion.div
-            key={o.id}
-            layout
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97 }}
-            transition={{ duration: 0.2 }}
-          >
-            <OrderCard order={o} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+          {shown.length === 0 && (
+            <Alert variant="warning">
+              <AlertDescription>{current.empty}</AlertDescription>
+            </Alert>
+          )}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {shown.map((o) => (
+              <motion.div
+                key={o.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.2 }}
+              >
+                <OrderCard order={o} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </TabsContent>
+      </Tabs>
 
       <PageFooter>
         <p>
@@ -125,9 +124,9 @@ export default function OrderBoard({ initialOrders }: { initialOrders: Order[] }
         </p>
         {/* The demo has no login, so nothing to log out of. */}
         {!backend.demo && (
-          <LinkButton onClick={logout} className="inline-flex items-center gap-1.5">
-            <LuLogOut aria-hidden /> Log out
-          </LinkButton>
+          <Button variant="link" size="sm" onClick={logout} className="underline">
+            <LogOut data-icon="inline-start" /> Log out
+          </Button>
         )}
       </PageFooter>
       <Toast />

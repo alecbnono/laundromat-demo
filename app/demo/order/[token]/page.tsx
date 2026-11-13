@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import OrderStatus from "@/components/OrderStatus";
 import ShopHeader from "@/components/ShopHeader";
-import { Notice } from "@/components/ui";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDemoStore } from "@/lib/demo/store";
 
 export default function DemoOrder() {
@@ -16,10 +16,12 @@ export default function DemoOrder() {
     return (
       <>
         <ShopHeader />
-        <Notice>
-          This demo order is gone. Demo orders are only kept until the page is refreshed.{" "}
-          <Link href="/demo">Start a new request</Link>
-        </Notice>
+        <Alert variant="warning" className="mt-3.5">
+          <AlertDescription>
+            This demo order is gone. Demo orders are only kept until the page is refreshed.{" "}
+            <Link href="/demo">Start a new request</Link>
+          </AlertDescription>
+        </Alert>
       </>
     );
   }

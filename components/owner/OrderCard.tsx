@@ -1,21 +1,25 @@
 "use client";
 
+import { useId, type ComponentProps } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LuBan, LuPhone, LuSave, LuStore, LuTruck, LuUndo2 } from "react-icons/lu";
+import { Ban, Phone, Save, Store, Truck, Undo2 } from "lucide-react";
 import ReadyMessage from "@/components/owner/ReadyMessage";
 import { useUpdateOrder } from "@/components/owner/useOrders";
+import Summary from "@/components/Summary";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
-  FieldError,
-  LinkButton,
-  Pill,
-  Summary,
-  cardClass,
-  inputClass,
-  type PillTone,
-} from "@/components/ui";
-import { cn } from "@/lib/cn";
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { displayPhone, formatDateTime, formatDay, peso, readyMessage } from "@/lib/format";
 import { shop } from "@/lib/shop";
 import {
@@ -60,13 +64,13 @@ const PREVIOUS: Partial<Record<Status, Status>> = {
   cancelled: "new",
 };
 
-const STATUS_TONE: Record<Status, PillTone> = {
-  new: "warn",
+const STATUS_BADGE: Record<Status, ComponentProps<typeof Badge>["variant"]> = {
+  new: "warning",
   picked_up: "info",
   washing: "info",
-  ready: "ok",
-  completed: "neutral",
-  cancelled: "danger",
+  ready: "success",
+  completed: "secondary",
+  cancelled: "destructive",
 };
 
 function BillingFields({
@@ -98,31 +102,38 @@ function BillingFields({
     });
   });
 
+  // Several cards are on screen at once, so the field ids must differ per card.
+  const id = useId();
+
   return (
-    <form onSubmit={save} noValidate>
+    <form onSubmit={save} noValidate className="grid gap-2">
       <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-        <label>
-          <span className="mb-1 block text-[0.85rem] text-muted">Kilos</span>
-          <input
+        <Field className="gap-1">
+          <FieldLabel htmlFor={`${id}-kg`} className="font-normal text-muted-foreground">
+            Kilos
+          </FieldLabel>
+          <Input
             {...register("weightKg")}
+            id={`${id}-kg`}
             inputMode="decimal"
             placeholder="0"
             aria-invalid={!!errors.weightKg}
-            className={inputClass}
           />
-        </label>
-        <label>
-          <span className="mb-1 block text-[0.85rem] text-muted">Amount (₱)</span>
-          <input
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel htmlFor={`${id}-amount`} className="font-normal text-muted-foreground">
+            Amount (₱)
+          </FieldLabel>
+          <Input
             {...register("amount")}
+            id={`${id}-amount`}
             inputMode="decimal"
             placeholder="0"
             aria-invalid={!!errors.amount}
-            className={inputClass}
           />
-        </label>
-        <Button type="submit" disabled={disabled}>
-          <LuSave aria-hidden /> Save
+        </Field>
+        <Button type="submit" variant="outline" disabled={disabled}>
+          <Save data-icon="inline-start" /> Save
         </Button>
       </div>
       <FieldError>{errors.weightKg?.message ?? errors.amount?.message}</FieldError>
@@ -142,138 +153,172 @@ export default function OrderCard({ order }: { order: Order }) {
   const delivery = order.fulfillment === "delivery";
 
   return (
-    <article className={cn(cardClass, "grid gap-3.5")} data-order-id={order.id}>
-      <div className="flex items-start justify-between gap-2.5">
-        <div>
-          <h3 className="text-[1.05rem] font-bold">
-            #{order.id} · {order.customer.name}
-          </h3>
-          <a href={`tel:${order.customer.phone}`} className="inline-flex items-center gap-1.5">
-            <LuPhone aria-hidden /> {displayPhone(order.customer.phone)}
-          </a>
-        </div>
-        <Pill tone={STATUS_TONE[order.status]}>{STATUS_LABEL[order.status]}</Pill>
-      </div>
+    <article data-order-id={order.id}>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h3 className="font-bold">
+              #{order.id} · {order.customer.name}
+            </h3>
+          </CardTitle>
+          <CardDescription>
+            <a
+              href={`tel:${order.customer.phone}`}
+              className="inline-flex items-center gap-1.5 text-base"
+            >
+              <Phone className="size-4" /> {displayPhone(order.customer.phone)}
+            </a>
+          </CardDescription>
+          <CardAction>
+            <Badge variant={STATUS_BADGE[order.status]}>{STATUS_LABEL[order.status]}</Badge>
+          </CardAction>
+        </CardHeader>
 
-      <Summary
-        rows={[
-          ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`],
-          ["Address", order.address + (order.landmark ? ` (${order.landmark})` : "")],
-          ["Service", order.service],
-          [
-            "Return",
-            <span key="return" className="inline-flex items-center gap-1.5">
-              {delivery ? <LuTruck aria-hidden /> : <LuStore aria-hidden />}
-              {delivery ? "Deliver" : "Customer collects"}
-            </span>,
-          ],
-          ...(order.notes ? [["Notes", order.notes] as [string, string]] : []),
-        ]}
-      />
-
-      {order.status !== "cancelled" && (
-        <div className="grid gap-2.5 border-t border-line pt-3">
-          {/* key: reset the boxes when the saved values change */}
-          <BillingFields
-            key={`${order.weightKg}-${order.amountCentavos}`}
-            order={order}
-            disabled={busy}
-            onSave={(patch) => change(patch, "Saved")}
+        <CardContent className="grid gap-3.5">
+          <Summary
+            rows={[
+              ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`],
+              ["Address", order.address + (order.landmark ? ` (${order.landmark})` : "")],
+              ["Service", order.service],
+              [
+                "Return",
+                <span key="return" className="inline-flex items-center gap-1.5">
+                  {delivery ? <Truck className="size-4" /> : <Store className="size-4" />}
+                  {delivery ? "Deliver" : "Customer collects"}
+                </span>,
+              ],
+              ...(order.notes ? [["Notes", order.notes] as [string, string]] : []),
+            ]}
           />
 
-          <div className="flex flex-wrap items-center gap-2">
-            {order.paid ? (
-              <>
-                <Pill tone="ok">
-                  Paid{order.amountCentavos != null ? ` ${peso(order.amountCentavos)}` : ""}
-                  {order.paymentMethod ? ` · ${PAYMENT_LABEL[order.paymentMethod]}` : ""}
-                </Pill>
-                <LinkButton disabled={busy} onClick={() => change({ paymentMethod: null })}>
-                  Undo
-                </LinkButton>
-              </>
-            ) : (
-              <>
-                <Pill tone="warn">Unpaid</Pill>
-                <span className="flex flex-wrap items-center gap-1.5 text-[0.9rem] text-muted">
-                  Paid by:
-                  {PAYMENT_METHODS.map((method) => (
+          {order.status !== "cancelled" && (
+            <>
+              <Separator />
+              {/* key: reset the boxes when the saved values change */}
+              <BillingFields
+                key={`${order.weightKg}-${order.amountCentavos}`}
+                order={order}
+                disabled={busy}
+                onSave={(patch) => change(patch, "Saved")}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
+                {order.paid ? (
+                  <>
+                    <Badge variant="success">
+                      Paid{order.amountCentavos != null ? ` ${peso(order.amountCentavos)}` : ""}
+                      {order.paymentMethod ? ` · ${PAYMENT_LABEL[order.paymentMethod]}` : ""}
+                    </Badge>
                     <Button
-                      key={method}
-                      small
+                      variant="link"
+                      size="sm"
+                      className="px-1 underline"
                       disabled={busy}
-                      onClick={() => change({ paymentMethod: method }, "Marked paid")}
+                      onClick={() => change({ paymentMethod: null })}
                     >
-                      {method === "bank" ? "Bank" : PAYMENT_LABEL[method]}
+                      Undo
                     </Button>
-                  ))}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                  </>
+                ) : (
+                  <>
+                    <Badge variant="warning">Unpaid</Badge>
+                    <span className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                      Paid by:
+                      {PAYMENT_METHODS.map((method) => (
+                        <Button
+                          key={method}
+                          variant="outline"
+                          size="sm"
+                          className="text-foreground"
+                          disabled={busy}
+                          onClick={() => change({ paymentMethod: method }, "Marked paid")}
+                        >
+                          {method === "bank" ? "Bank" : PAYMENT_LABEL[method]}
+                        </Button>
+                      ))}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
-      {order.status === "ready" && (
-        <>
-          <ReadyMessage message={readyMessage(order, shop.name)} phone={order.customer.phone} />
-          <div className="flex flex-wrap items-center gap-2">
-            {order.notifiedAt ? (
-              <>
-                <Pill tone="ok">Customer told · {formatDateTime(order.notifiedAt)}</Pill>
-                <LinkButton disabled={busy} onClick={() => change({ notified: false })}>
-                  Undo
-                </LinkButton>
-              </>
-            ) : (
-              <>
-                <Pill tone="warn">Customer not told yet</Pill>
-                <Button small disabled={busy} onClick={() => change({ notified: true })}>
-                  I told the customer
-                </Button>
-              </>
-            )}
-          </div>
-        </>
-      )}
+          {order.status === "ready" && (
+            <>
+              <ReadyMessage message={readyMessage(order, shop.name)} phone={order.customer.phone} />
+              <div className="flex flex-wrap items-center gap-2">
+                {order.notifiedAt ? (
+                  <>
+                    <Badge variant="success">
+                      Customer told · {formatDateTime(order.notifiedAt)}
+                    </Badge>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="px-1 underline"
+                      disabled={busy}
+                      onClick={() => change({ notified: false })}
+                    >
+                      Undo
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Badge variant="warning">Customer not told yet</Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => change({ notified: true })}
+                    >
+                      I told the customer
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
-      {next && (
-        <Button
-          variant="primary"
-          className="w-full"
-          disabled={busy}
-          onClick={() => change({ status: next.status }, STATUS_LABEL[next.status])}
-        >
-          {next.label}
-        </Button>
-      )}
+          {next && (
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => change({ status: next.status }, STATUS_LABEL[next.status])}
+            >
+              {next.label}
+            </Button>
+          )}
 
-      {(previous || !closed) && (
-        <details>
-          <summary className="py-1.5 text-muted">More</summary>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {previous && (
-              <Button
-                className="flex-[1_1_140px]"
-                disabled={busy}
-                onClick={() => change({ status: previous })}
-              >
-                <LuUndo2 aria-hidden /> Move back to &quot;{STATUS_LABEL[previous]}&quot;
-              </Button>
-            )}
-            {!closed && (
-              <Button
-                variant="danger"
-                className="flex-[1_1_140px]"
-                disabled={busy}
-                onClick={() => change({ status: "cancelled" }, "Order cancelled")}
-              >
-                <LuBan aria-hidden /> Cancel order
-              </Button>
-            )}
-          </div>
-        </details>
-      )}
+          {(previous || !closed) && (
+            <details>
+              <summary className="py-1.5 text-muted-foreground">More</summary>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {previous && (
+                  <Button
+                    variant="outline"
+                    className="flex-[1_1_140px]"
+                    disabled={busy}
+                    onClick={() => change({ status: previous })}
+                  >
+                    <Undo2 data-icon="inline-start" /> Move back to &quot;{STATUS_LABEL[previous]}
+                    &quot;
+                  </Button>
+                )}
+                {!closed && (
+                  <Button
+                    variant="destructive"
+                    className="flex-[1_1_140px]"
+                    disabled={busy}
+                    onClick={() => change({ status: "cancelled" }, "Order cancelled")}
+                  >
+                    <Ban data-icon="inline-start" /> Cancel order
+                  </Button>
+                )}
+              </div>
+            </details>
+          )}
+        </CardContent>
+      </Card>
     </article>
   );
 }

@@ -8,17 +8,21 @@ the owner can copy or send by SMS.
 | Part | Tool |
 | --- | --- |
 | Framework, language | Next.js (App Router), TypeScript |
-| Styling | Tailwind CSS (colours in `app/globals.css`; small shared pieces in `components/ui.tsx`) |
+| Styling | Tailwind CSS + shadcn/ui (Radix). Shop colours in `app/globals.css`; components in `components/ui/` |
 | Database | Drizzle ORM over SQLite/libSQL |
 | Owner login | BetterAuth (email and password) |
 | Data fetching | TanStack Query (order list, all saves) |
 | UI state | Zustand (open tab, confirmation toast) |
 | Forms | React Hook Form + Zod (same rules checked in the browser and on the server) |
-| Animation, icons | Framer Motion, React Icons |
+| Animation, icons | Framer Motion, Lucide |
 | Tests | Vitest (unit), Cypress (end to end) |
 
-shadcn/ui is not installed. The app has about six shared UI pieces, so they are plain
-Tailwind components in one file; add shadcn later if the UI grows.
+The shadcn/ui components are copied into `components/ui/` and are ours to edit. They differ
+from stock shadcn in a few places: buttons, inputs and selects are 48px tall for thumbs on a
+phone, badges and alerts have `success` / `warning` colours, and the font is the system font
+(nothing is downloaded). Add more with `npx shadcn@latest add <name>`; if you re-add one of
+the existing components, check the diff so those changes are not lost. The confirmation
+toast is still our own small component, not shadcn's Sonner.
 
 ## Run it
 
@@ -113,4 +117,5 @@ first time, `npx cypress install` to download Cypress's test runner.
 - `app/api/orders/` create, list, update orders · `app/api/auth/` login endpoints
 - `app/demo/` demo pages · `components/DemoShell.tsx` demo banner and view switch
 - `components/` pickup form, login form · `components/owner/` order list, card, ready message
+- `components/ui/` shadcn/ui components · `components.json` shadcn settings
 - `scripts/` seed, create-owner, e2e runner · `cypress/e2e/` browser tests
