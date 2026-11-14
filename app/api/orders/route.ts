@@ -1,40 +1,83 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { createOrder, listOrders } from "@/lib/db/orders";
-import { normalizePhone } from "@/lib/format";
-import { getOwnerSession } from "@/lib/session";
-import { pickupRequestSchema } from "@/lib/validation";
+import { explain, fail, invalid, requireSession } from "@/lib/api-helpers";
+import { createOrder, getOrder, listOrders } from "@/lib/db/orders";
+import { getShop, getShopBySlug, listServices } from "@/lib/db/shops";
+import { manilaDate, normalizePhone } from "@/lib/format";
+import { getSession } from "@/lib/session";
+import type { Shop } from "@/lib/types";
+import { manualOrderSchema, parseAmount, pickupRequestSchema, MAX_KG } from "@/lib/validation";
 
-/** Owner: every order, for the order list. */
+/** Owner and staff: every order of their shop. */
 export async function GET() {
-  if (!(await getOwnerSession()))
-    return NextResponse.json({ error: "Please log in again." }, { status: 401 });
-  return NextResponse.json(await listOrders());
+  const { session, denied } = await requireSession();
+  if (denied) return denied;
+  return NextResponse.json(await listOrders(session.shopId));
 }
 
-/** Customer: submit a pickup request. Public, no login. */
+async function formOptions(shop: Shop) {
+  const services = await listServices(shop.id, { activeOnly: true });
+  return {
+    serviceIds: services.map((s) => s.id),
+    pickupWindows: shop.pickupWindows,
+    maxDaysAhead: shop.maxDaysAhead,
+  };
+}
+
+/**
+ * Two callers:
+ * - A customer submitting a shop's public form: { shop: "<slug>", ...form }. No login.
+ * - Owner or staff adding an order by hand (B5): { manual: true, ...form }.
+ */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const parsed = pickupRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: "Please check the form and try again.",
-        fieldErrors: z.flattenError(parsed.error).fieldErrors,
-      },
-      { status: 400 },
-    );
-  }
+  if (!body || typeof body !== "object") return fail(400, "Please check the form and try again.");
+  return body.manual === true ? manualOrder(body) : publicRequest(body);
+}
 
-  const { website, phone, ...rest } = parsed.data;
-  // Hidden field that people never fill in; bots usually do.
-  if (website) {
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 400 },
-    );
-  }
+async function publicRequest(body: { shop?: unknown }) {
+  const shop = typeof body.shop === "string" ? await getShopBySlug(body.shop) : null;
+  if (!shop) return fail(404, "This shop's form is not available.");
 
-  const { token } = await createOrder({ ...rest, phone: normalizePhone(phone)! });
+  const parsed = pickupRequestSchema(await formOptions(shop)).safeParse(body);
+  if (!parsed.success) return invalid(parsed.error);
+  const { website, phone, serviceId, ...rest } = parsed.data;
+  // Hidden field that people never fill in; bots usually do (A6).
+  if (website) return fail(400, "Something went wrong. Please try again.");
+
+  const { token } = await createOrder(
+    shop.id,
+    { ...rest, phone: normalizePhone(phone)!, serviceId: Number(serviceId), intake: "pickup" },
+    { source: "form", byName: "Customer" },
+  );
   return NextResponse.json({ token }, { status: 201 });
+}
+
+async function manualOrder(body: object) {
+  const session = await getSession();
+  if (!session) return fail(401, "Please log in again.");
+  const shop = await getShop(session.shopId);
+  if (!shop) return fail(404, "Shop not found.");
+
+  const parsed = manualOrderSchema(await formOptions(shop)).safeParse(body);
+  if (!parsed.success) return invalid(parsed.error);
+  const { phone, serviceId, weightKg, intake, ...rest } = parsed.data;
+  const dropOff = intake === "dropoff";
+  try {
+    const { id } = await createOrder(
+      shop.id,
+      {
+        ...rest,
+        intake,
+        phone: normalizePhone(phone)!,
+        serviceId: Number(serviceId),
+        weightKg: parseAmount(weightKg, MAX_KG) ?? null,
+        // A drop-off is already at the shop, so it has no pickup to wait for.
+        ...(dropOff ? { pickupDate: manilaDate(), pickupWindow: "" } : {}),
+      },
+      { source: "manual", byName: session.me.name, status: dropOff ? "picked_up" : "new" },
+    );
+    return NextResponse.json(await getOrder(shop.id, id), { status: 201 });
+  } catch (e) {
+    return explain(e);
+  }
 }

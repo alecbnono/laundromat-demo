@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import Providers from "@/components/Providers";
-import { shop } from "@/lib/shop";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: shop.name, template: `%s · ${shop.name}` },
-  description: `Request a laundry pickup from ${shop.name}.`,
-  icons: { icon: shop.logo },
+  title: { default: "Laundry Dashboard", template: "%s" },
+  description: "Pickup requests, orders and cash for laundry shops.",
+  icons: { icon: "/logo.svg" },
 };
 
 export const viewport: Viewport = {

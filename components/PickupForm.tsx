@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
+import { useGo } from "@/components/AppLink";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,15 +24,11 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
-import { useBackend } from "@/lib/backend";
+import { useBackend, useShop } from "@/lib/backend";
+import { manilaDate, ratePerKg } from "@/lib/format";
+import type { Service } from "@/lib/types";
 import { pickupRequestSchema, type PickupRequest } from "@/lib/validation";
 
-interface Props {
-  services: readonly { name: string; price: string }[];
-  windows: readonly string[];
-  minDate: string;
-  maxDate: string;
-}
 
 const optional = <span className="font-normal text-muted-foreground">(optional)</span>;
 
@@ -51,9 +47,13 @@ function Choice({ id, value, title, detail }: { id: string; value: string; title
   );
 }
 
-export default function PickupForm({ services, windows, minDate, maxDate }: Props) {
-  const router = useRouter();
+export default function PickupForm({ services }: { services: Service[] }) {
+  const go = useGo();
   const backend = useBackend();
+  const shop = useShop();
+  const windows = shop.pickupWindows;
+  const minDate = manilaDate();
+  const maxDate = manilaDate(shop.maxDaysAhead);
   const queryClient = useQueryClient();
   const {
     register,
@@ -62,13 +62,19 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
     setError,
     formState: { errors },
   } = useForm<PickupRequest>({
-    resolver: zodResolver(pickupRequestSchema),
+    resolver: zodResolver(
+      pickupRequestSchema({
+        serviceIds: services.map((s) => s.id),
+        pickupWindows: windows,
+        maxDaysAhead: shop.maxDaysAhead,
+      }),
+    ),
     defaultValues: {
       name: "",
       phone: "",
       address: "",
       landmark: "",
-      service: services[0]?.name,
+      serviceId: String(services[0]?.id ?? ""),
       pickupDate: minDate,
       pickupWindow: "",
       fulfillment: "delivery",
@@ -78,10 +84,12 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
   });
 
   const submit = useMutation({
-    mutationFn: backend.createOrder,
+    networkMode: backend.networkMode,
+    mutationFn: (data: PickupRequest) => backend.createOrder(shop, data),
     onSuccess: ({ token }) => {
-      queryClient.invalidateQueries({ queryKey: backend.ordersKey });
-      router.push(`${backend.base}/order/${token}?new=1`);
+      queryClient.invalidateQueries({ queryKey: backend.keys.orders });
+      const page = backend.paths.order(token);
+      go(`${page}${page.includes("?") ? "&" : "?"}new=1`);
     },
     onError: (e) => {
       // Show the server's per-field messages next to the fields, if it sent any.
@@ -113,7 +121,7 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
     </Field>
   );
   /** A group of radio choices. */
-  const choices = (name: "service" | "fulfillment", legend: string, children: ReactNode) => (
+  const choices = (name: "serviceId" | "fulfillment", legend: string, children: ReactNode) => (
     <FieldSet data-invalid={!!errors[name]}>
       <FieldLegend variant="label">{legend}</FieldLegend>
       <Controller
@@ -181,10 +189,16 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
             )}
 
             {choices(
-              "service",
+              "serviceId",
               "Service",
-              services.map((s, i) => (
-                <Choice key={s.name} id={`service-${i}`} value={s.name} title={s.name} detail={s.price} />
+              services.map((s) => (
+                <Choice
+                  key={s.id}
+                  id={`service-${s.id}`}
+                  value={String(s.id)}
+                  title={s.name}
+                  detail={`${ratePerKg(s.pricePerKgCentavos)} (per kilo)`}
+                />
               )),
             )}
 
@@ -240,6 +254,10 @@ export default function PickupForm({ services, windows, minDate, maxDate }: Prop
               {busy ? "Sending…" : "Request pickup"}
               {!busy && <ArrowRight data-icon="inline-end" />}
             </Button>
+            <FieldDescription className="text-center">
+              {shop.name} uses your name, number and address only to pick up and return your
+              laundry.
+            </FieldDescription>
           </FieldGroup>
         </form>
       </CardContent>

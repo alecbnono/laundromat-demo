@@ -1,7 +1,5 @@
-"use client";
+import DemoShell from "@/components/DemoShell";
 
-import RequestPage from "@/components/RequestPage";
-
-export default function DemoHome() {
-  return <RequestPage />;
+export default function DemoPage() {
+  return <DemoShell />;
 }

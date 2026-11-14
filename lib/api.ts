@@ -1,6 +1,14 @@
 // Browser-side calls to our API routes. Used by TanStack Query hooks.
-import type { Order, OrderPatch } from "./types";
-import type { PickupRequest } from "./validation";
+import type {
+  Member,
+  NewPayment,
+  NewStaff,
+  Order,
+  OrderPatch,
+  Service,
+  ServiceInput,
+} from "./types";
+import type { ManualOrder, PickupRequest } from "./validation";
 
 export class ApiError extends Error {
   status: number;
@@ -12,12 +20,13 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+async function request<T>(url: string, method = "GET", data?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
-      ...init,
-      headers: init?.body ? { "content-type": "application/json" } : undefined,
+      method,
+      body: data === undefined ? undefined : JSON.stringify(data),
+      headers: data === undefined ? undefined : { "content-type": "application/json" },
     });
   } catch {
     throw new ApiError(0, "No connection. Check your internet and try again.");
@@ -34,9 +43,20 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  createOrder: (data: PickupRequest) =>
-    request<{ token: string }>("/api/orders", { method: "POST", body: JSON.stringify(data) }),
+  createOrder: (shopSlug: string, data: PickupRequest) =>
+    request<{ token: string }>("/api/orders", "POST", { ...data, shop: shopSlug }),
+  createManualOrder: (data: ManualOrder) =>
+    request<Order>("/api/orders", "POST", { ...data, manual: true }),
   listOrders: () => request<Order[]>("/api/orders"),
   updateOrder: (id: number, patch: OrderPatch) =>
-    request<Order>(`/api/orders/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+    request<Order>(`/api/orders/${id}`, "PATCH", patch),
+  addPayment: (orderId: number, payment: NewPayment) =>
+    request<Order>(`/api/orders/${orderId}/payments`, "POST", payment),
+  removePayment: (orderId: number, paymentId: number) =>
+    request<Order>(`/api/orders/${orderId}/payments/${paymentId}`, "DELETE"),
+  listServices: () => request<Service[]>("/api/services"),
+  saveService: (service: ServiceInput) => request<Service[]>("/api/services", "POST", service),
+  listTeam: () => request<Member[]>("/api/team"),
+  addStaff: (staff: NewStaff) => request<Member[]>("/api/team", "POST", staff),
+  removeStaff: (id: string) => request<Member[]>(`/api/team/${id}`, "DELETE"),
 };

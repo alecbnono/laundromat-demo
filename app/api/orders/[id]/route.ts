@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
+import { explain, fail, idParam, requireSession } from "@/lib/api-helpers";
 import { updateOrder } from "@/lib/db/orders";
-import { getOwnerSession } from "@/lib/session";
 import { orderPatchSchema } from "@/lib/validation";
 
-/** Owner: change status, kilos/amount, payment, or the "customer told" tick. */
+/** Owner and staff: change status, kilos/total, details, or the "customer told" tick. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await getOwnerSession()))
-    return NextResponse.json({ error: "Please log in again." }, { status: 401 });
+  const { session, denied } = await requireSession();
+  if (denied) return denied;
 
-  const id = Number((await params).id);
+  const id = idParam((await params).id);
   const parsed = orderPatchSchema.safeParse(await req.json().catch(() => null));
-  if (!Number.isInteger(id) || id <= 0 || !parsed.success)
-    return NextResponse.json({ error: "That change could not be saved." }, { status: 400 });
+  if (!id || !parsed.success) return fail(400, "That change could not be saved.");
 
-  const order = await updateOrder(id, parsed.data);
-  if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
-  return NextResponse.json(order);
+  try {
+    const order = await updateOrder(session.shopId, id, parsed.data, session.me.name);
+    return order ? NextResponse.json(order) : fail(404, "Order not found.");
+  } catch (e) {
+    return explain(e);
+  }
 }

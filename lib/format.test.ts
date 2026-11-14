@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { displayPhone, formatDay, manilaDate, normalizePhone, peso, readyMessage } from "./format";
+import {
+  displayPhone,
+  formatDay,
+  manilaDate,
+  manilaDay,
+  normalizePhone,
+  peso,
+  readyMessage,
+} from "./format";
 import type { Order } from "./types";
 
 describe("normalizePhone", () => {
@@ -33,30 +41,51 @@ describe("formatDay", () => {
   it("formats other dates", () => expect(formatDay("2020-01-15")).toBe("Wed, Jan 15"));
 });
 
-describe("readyMessage", () => {
+describe("readyMessage (B7)", () => {
   const order = {
-    id: 12,
+    number: 12,
+    status: "ready",
     fulfillment: "delivery",
     amountCentavos: 36000,
-    paid: false,
+    payments: [],
     customer: { id: 1, name: "Grace Villanueva", phone: "+639000000103" },
-  } as Order;
+  } as unknown as Order;
+  const paid = (amountCentavos: number) => ({ ...order, payments: [{ amountCentavos }] }) as Order;
 
   it("uses the first name, order number and total", () => {
     const text = readyMessage(order, "Sampaloc Laundry House");
     expect(text).toContain("Hi Grace!");
+    expect(text).toContain("from Sampaloc Laundry House");
     expect(text).toContain("order #12");
     expect(text).toContain("Total: ₱360.");
     expect(text).toContain("deliver it to your address");
   });
 
   it("says when it is already paid and for collection", () => {
-    const text = readyMessage({ ...order, paid: true, fulfillment: "collect" }, "Shop");
+    const text = readyMessage({ ...paid(36000), fulfillment: "collect" }, "Shop");
     expect(text).toContain("Total: ₱360 (paid).");
     expect(text).toContain("collect it at the shop");
   });
 
+  it("gives the amount still due after a part payment", () => {
+    expect(readyMessage(paid(10000), "Shop")).toContain("Total: ₱360. Still to pay: ₱260.");
+  });
+
+  it("adds the order link when given one", () => {
+    const link = "https://laundry.example.com/order/abc123XYZ";
+    expect(readyMessage(order, "Shop", link)).toContain(`Your order: ${link} Thank you!`);
+    expect(readyMessage(order, "Shop")).not.toContain("Your order:");
+  });
+
   it("leaves the total out when no amount is set", () => {
     expect(readyMessage({ ...order, amountCentavos: null }, "Shop")).not.toContain("Total");
+  });
+});
+
+describe("manilaDay", () => {
+  it("uses the Manila calendar day, not the UTC one", () => {
+    // 11:30 PM on the 13th in UTC is already 7:30 AM on the 14th in Manila.
+    expect(manilaDay("2026-11-13T23:30:00Z")).toBe("2026-11-14");
+    expect(manilaDay("2026-11-13T15:59:00Z")).toBe("2026-11-13");
   });
 });

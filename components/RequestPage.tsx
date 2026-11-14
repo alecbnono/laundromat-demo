@@ -1,11 +1,15 @@
+"use client";
+
 import PageFooter from "@/components/PageFooter";
 import PickupForm from "@/components/PickupForm";
 import ShopHeader from "@/components/ShopHeader";
-import { displayPhone, manilaDate } from "@/lib/format";
-import { shop } from "@/lib/shop";
+import { useShop } from "@/lib/backend";
+import { displayPhone } from "@/lib/format";
+import type { Service } from "@/lib/types";
 
-/** The customer's pickup request screen. Shared by / and /demo. */
-export default function RequestPage() {
+/** A shop's public pickup request screen (A1). Shared by /s/<shop> and /demo. */
+export default function RequestPage({ services }: { services: Service[] }) {
+  const shop = useShop();
   return (
     <>
       <ShopHeader />
@@ -13,14 +17,9 @@ export default function RequestPage() {
       <p className="mb-3.5 text-muted-foreground">
         Fill this in and we will come to you. No account needed.
       </p>
-      <PickupForm
-        services={shop.services}
-        windows={shop.pickupWindows}
-        minDate={manilaDate()}
-        maxDate={manilaDate(shop.maxDaysAhead)}
-      />
+      <PickupForm services={services} />
       <PageFooter>
-        <p>{shop.hours}</p>
+        {shop.hours && <p>{shop.hours}</p>}
         <p>
           Questions? Call or text <a href={`tel:${shop.phone}`}>{displayPhone(shop.phone)}</a>
         </p>

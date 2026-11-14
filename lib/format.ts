@@ -1,4 +1,5 @@
 // Pure helpers, safe on both server and client.
+import { balanceCentavos } from "./money.ts";
 import type { Order } from "./types.ts";
 
 const TZ = "Asia/Manila";
@@ -30,6 +31,11 @@ export function manilaDate(offsetDays = 0): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 }
 
+/** The Manila calendar day (YYYY-MM-DD) that a moment in time falls on. */
+export function manilaDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
+}
+
 /** 2026-11-13 -> "Fri, Nov 13" (or "Today" / "Tomorrow") */
 export function formatDay(date: string): string {
   if (date === manilaDate()) return "Today";
@@ -42,6 +48,16 @@ export function formatDay(date: string): string {
   }).format(new Date(`${date}T12:00:00+08:00`));
 }
 
+/** Whole pesos as typed into a box: 26250 -> "262.5", 18000 -> "180". */
+export function pesosInput(centavos: number): string {
+  return String(centavos / 100);
+}
+
+/** "₱35/kg" */
+export function ratePerKg(centavos: number): string {
+  return `${peso(centavos)}/kg`;
+}
+
 export function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("en-PH", {
     timeZone: TZ,
@@ -52,17 +68,24 @@ export function formatDateTime(iso: string): string {
   }).format(new Date(iso));
 }
 
-/** The "your laundry is ready" text the owner copies or sends by SMS. */
-export function readyMessage(order: Order, shopName: string): string {
+/**
+ * The "your laundry is ready" text the shop copies or sends from its own phone (B7):
+ * customer name, shop name and the amount due.
+ * `statusLink` is the customer's private order page; it is added when given.
+ */
+export function readyMessage(order: Order, shopName: string, statusLink?: string): string {
   const firstName = order.customer.name.trim().split(/\s+/)[0];
   const parts = [
-    `Hi ${firstName}! Your laundry from ${shopName} is ready (order #${order.id}).`,
+    `Hi ${firstName}! Your laundry from ${shopName} is ready (order #${order.number}).`,
   ];
   if (order.amountCentavos != null) {
+    const due = balanceCentavos(order);
     parts.push(
-      order.paid
+      due === 0
         ? `Total: ${peso(order.amountCentavos)} (paid).`
-        : `Total: ${peso(order.amountCentavos)}.`,
+        : due === order.amountCentavos
+          ? `Total: ${peso(order.amountCentavos)}.`
+          : `Total: ${peso(order.amountCentavos)}. Still to pay: ${peso(due)}.`,
     );
   }
   parts.push(
@@ -70,6 +93,7 @@ export function readyMessage(order: Order, shopName: string): string {
       ? "We will deliver it to your address. Please reply if you want a different time."
       : "You can collect it at the shop anytime during opening hours.",
   );
+  if (statusLink) parts.push(`Your order: ${statusLink}`);
   parts.push("Thank you!");
   return parts.join(" ");
 }

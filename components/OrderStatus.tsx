@@ -1,12 +1,16 @@
-import Link from "next/link";
+"use client";
+
+import AppLink from "@/components/AppLink";
 import PageFooter from "@/components/PageFooter";
+import SaveLink from "@/components/SaveLink";
 import ShopHeader from "@/components/ShopHeader";
 import Summary from "@/components/Summary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { useBackend, useShop } from "@/lib/backend";
 import { cn } from "@/lib/cn";
 import { displayPhone, formatDay, peso } from "@/lib/format";
-import { shop } from "@/lib/shop";
+import { balanceCentavos } from "@/lib/money";
 import type { Order, Status } from "@/lib/types";
 
 const STEPS: { status: Status; label: string }[] = [
@@ -17,17 +21,16 @@ const STEPS: { status: Status; label: string }[] = [
   { status: "completed", label: "Completed" },
 ];
 
-/** The customer's order status screen. Shared by /order/<token> and /demo/order/<token>. */
-export default function OrderStatus({
-  order,
-  isNew,
-  formHref,
-}: {
-  order: Order;
-  isNew: boolean;
-  formHref: string;
-}) {
+/**
+ * The customer's confirmation screen (A4), reached by the order's private link. It also
+ * shows how far the order has got. Shared by /order/<token> and the demo.
+ */
+export default function OrderStatus({ order, isNew }: { order: Order; isNew: boolean }) {
+  const shop = useShop();
+  const backend = useBackend();
   const current = STEPS.findIndex((s) => s.status === order.status);
+  const due = balanceCentavos(order);
+  const pickup = order.intake === "pickup";
 
   return (
     <>
@@ -42,10 +45,13 @@ export default function OrderStatus({
         </Alert>
       ) : null}
 
-      <h2 className="mt-5 mb-1 text-[1.35rem] font-bold">Order #{order.id}</h2>
-      <p className="mb-3.5 text-muted-foreground">
-        Keep this page open or save the link to check your order.
+      <h2 className="mt-5 mb-1 text-[1.35rem] font-bold">Order #{order.number}</h2>
+      <p className="mb-2.5 text-muted-foreground">
+        This page shows your order as it moves along. Save the link to come back to it.
       </p>
+      <div className="mb-3.5">
+        <SaveLink title={`${shop.name}: order #${order.number}`} />
+      </div>
 
       <div className="grid gap-3.5">
         {order.status === "cancelled" ? (
@@ -87,14 +93,29 @@ export default function OrderStatus({
             <Summary
               rows={[
                 ["Service", order.service],
-                ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`],
-                ["Address", order.address + (order.landmark ? ` (${order.landmark})` : "")],
+                pickup
+                  ? ["Pickup", `${formatDay(order.pickupDate)}, ${order.pickupWindow}`]
+                  : ["Received", `Dropped off at the shop, ${formatDay(order.pickupDate)}`],
+                ...(order.address
+                  ? [
+                      [
+                        "Address",
+                        order.address + (order.landmark ? ` (${order.landmark})` : ""),
+                      ] as [string, string],
+                    ]
+                  : []),
                 ["Return", order.fulfillment === "delivery" ? "Delivery" : "Collect at shop"],
                 ...(order.amountCentavos != null
                   ? [
                       [
                         "Total",
-                        `${peso(order.amountCentavos)} ${order.paid ? "(paid)" : "(unpaid)"}`,
+                        `${peso(order.amountCentavos)} ${
+                          due === 0
+                            ? "(paid)"
+                            : due === order.amountCentavos
+                              ? "(unpaid)"
+                              : `(${peso(due)} still to pay)`
+                        }`,
                       ] as [string, string],
                     ]
                   : []),
@@ -110,7 +131,7 @@ export default function OrderStatus({
           <a href={`tel:${shop.phone}`}>{displayPhone(shop.phone)}</a>
         </p>
         <p>
-          <Link href={formHref}>Request another pickup</Link>
+          <AppLink href={backend.paths.form(shop)}>Request another pickup</AppLink>
         </p>
       </PageFooter>
     </>
